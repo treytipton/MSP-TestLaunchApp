@@ -10,4 +10,10 @@
 	<EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Reference Include="LabJack.LJM">
+      <HintPath>F:\Program Files\LabJack\Drivers\LabJack.LJM.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
