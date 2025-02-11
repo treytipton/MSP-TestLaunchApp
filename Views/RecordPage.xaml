@@ -137,7 +137,9 @@
                             HorizontalAlignment="Stretch" 
                             VerticalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch">
+                            VerticalContentAlignment="Stretch"
+                            Click="SensorCheckButton_Click">
+                            
                         <Viewbox Stretch="Uniform">
                             <TextBlock Text="Sensor Check" Foreground="White" Margin="2"/>
                         </Viewbox>

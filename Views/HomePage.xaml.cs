@@ -26,14 +26,14 @@ namespace Project_FREAK.Views
         // Event handlers for the buttons on the home page
         private void RecordButton_Click(object sender, RoutedEventArgs e)
         {
-            RecordPage recordPage = new RecordPage();
-            this.NavigationService.Navigate(recordPage);
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            mainWindow.NavigateToPage(new RecordPage(), "Record");
         }
 
         private void ReplayButton_Click(object sender, RoutedEventArgs e)
         {
-            ReplayPage replayPage = new ReplayPage();
-            this.NavigationService.Navigate(replayPage);
+            var mainWindow = (MainWindow)Application.Current.MainWindow;
+            mainWindow.NavigateToPage(new ReplayPage(), "Replay");
         }
     }
 }

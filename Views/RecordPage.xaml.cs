@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,10 +22,10 @@ namespace Project_FREAK.Views
 {
     public partial class RecordPage : Page
     {
+        private SensorCheckWindow? _sensorCheckWindow;
         private VideoCapture? _capture; // VideoCapture object to access the webcam
         private CancellationTokenSource? _cts; // Token source to cancel the capture loop
         private CancellationTokenSource? _loadingCts; // Token source to stop loading animation
-
 
         // Importing the DeleteObject function from the gdi32.dll to release GDI objects (like HBITMAPs) in unmanaged code.
         [DllImport("gdi32.dll")]
@@ -175,6 +175,24 @@ namespace Project_FREAK.Views
                 _capture.Release();
                 _capture.Dispose();
                 _capture = null;
+            }
+        }
+
+        private void SensorCheckButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_sensorCheckWindow == null)
+            {
+                _sensorCheckWindow = new SensorCheckWindow();
+                _sensorCheckWindow.Closed += (s, args) => _sensorCheckWindow = null;
+                _sensorCheckWindow.Show();
+            }
+            else
+            {
+                if (_sensorCheckWindow.WindowState == WindowState.Minimized)
+                {
+                    _sensorCheckWindow.WindowState = WindowState.Normal;
+                }
+                _sensorCheckWindow.Activate();
             }
         }
     }
