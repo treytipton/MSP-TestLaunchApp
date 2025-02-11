@@ -22,6 +22,11 @@ namespace Project_FREAK
             UpdateMenuItems("Home");
         }
 
+        public void NavigateToPage(Page page, string pageName)
+        {
+            MainFrame.Navigate(page);
+            UpdateMenuItems(pageName);
+        }
 
         private void UpdateMenuItems(string currentPage)
         {
@@ -44,20 +49,17 @@ namespace Project_FREAK
 
         private void HomeMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MainFrame.Navigate(new HomePage());
-            UpdateMenuItems("Home");
+            NavigateToPage(new HomePage(), "Home");
         }
 
         private void RecordMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MainFrame.Navigate(new RecordPage());
-            UpdateMenuItems("Record");
+            NavigateToPage(new RecordPage(), "Record");
         }
 
         private void ReplayMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            MainFrame.Navigate(new ReplayPage());
-            UpdateMenuItems("Replay");
+            NavigateToPage(new ReplayPage(), "Replay");
         }
     }
 }
