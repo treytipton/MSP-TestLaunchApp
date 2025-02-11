@@ -18,9 +18,29 @@ namespace Project_FREAK.Views
     /// Interaction logic for RecordPage.xaml
     public partial class RecordPage : Page
     {
+        private SensorCheckWindow? _sensorCheckWindow;
+
         public RecordPage()
         {
             InitializeComponent();
+        }
+
+        private void SensorCheckButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_sensorCheckWindow == null)
+            {
+                _sensorCheckWindow = new SensorCheckWindow();
+                _sensorCheckWindow.Closed += (s, args) => _sensorCheckWindow = null;
+                _sensorCheckWindow.Show();
+            }
+            else
+            {
+                if (_sensorCheckWindow.WindowState == WindowState.Minimized)
+                {
+                    _sensorCheckWindow.WindowState = WindowState.Normal;
+                }
+                _sensorCheckWindow.Activate();
+            }
         }
     }
 }
