@@ -34,11 +34,21 @@ namespace Project_FREAK.Views
         public RecordPage()
         {
             InitializeComponent();
+            //begin to subscribe to labjack data updates through action
+            LabJackHandleManager.Instance.DataUpdated += UpdateGraphs;
             // Load webcam feed separately from the UI thread.
             this.Loaded += RecordPage_Loaded;
             this.Unloaded += RecordPage_Unloaded;
         }
-
+        //thrust in N, pressure in PSI
+        private void UpdateGraphs(double thrustVoltage, double calibratedThrust, double pressureVoltage, double calibratedPressure)
+        {
+            //on an update, invoke ui thread to update with correct values. This will be replaced later with graphs of data.
+            Dispatcher.Invoke(() => {
+                Graph1.Text = $"Thrust: {calibratedThrust:F2} N";
+                Graph2.Text = $"Pressure: {pressureVoltage:F2} PSI";
+            });
+        }
         // Load the webcam input on a background thread and start the loading text animation.
         private async void RecordPage_Loaded(object sender, RoutedEventArgs e)
         {

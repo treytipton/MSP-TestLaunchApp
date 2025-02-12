@@ -27,7 +27,7 @@
                     Margin="2"
                     HorizontalAlignment="Stretch" 
                     VerticalAlignment="Stretch">
-                <TextBlock Text="Graph 1 Placeholder" 
+                <TextBlock x:Name="Graph1" Text="Graph 1 Placeholder" 
                            Foreground="White" 
                            HorizontalAlignment="Center" 
                            VerticalAlignment="Center"
@@ -40,7 +40,7 @@
                     Margin="2"
                     HorizontalAlignment="Stretch" 
                     VerticalAlignment="Stretch">
-                <TextBlock Text="Graph 2 Placeholder" 
+                <TextBlock x:Name="Graph2" Text="Graph 2 Placeholder" 
                            Foreground="White" 
                            HorizontalAlignment="Center" 
                            VerticalAlignment="Center"

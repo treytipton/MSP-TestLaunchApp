@@ -17,4 +17,10 @@
 	<PackageReference Include="System.Drawing.Common" Version="9.0.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="LabJack.LJM">
+      <HintPath>F:\Program Files\LabJack\Drivers\LabJack.LJM.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
