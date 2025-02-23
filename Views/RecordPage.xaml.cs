@@ -17,6 +17,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using System.Windows.Threading;
 
 namespace Project_FREAK.Views
 {
@@ -27,6 +28,9 @@ namespace Project_FREAK.Views
         private CancellationTokenSource? _cts; // Token source to cancel the capture loop
         private CancellationTokenSource? _loadingCts; // Token source to stop loading animation
 
+        private DispatcherTimer _timer;
+        private bool _timerActive = false;
+        private int _secondsremaining = 10; //10 sec countdown by default
         // Importing the DeleteObject function from the gdi32.dll to release GDI objects (like HBITMAPs) in unmanaged code.
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
@@ -39,6 +43,9 @@ namespace Project_FREAK.Views
             // Load webcam feed separately from the UI thread.
             this.Loaded += RecordPage_Loaded;
             this.Unloaded += RecordPage_Unloaded;
+            _timer = new DispatcherTimer();
+            _timer.Interval = TimeSpan.FromSeconds(1);
+            _timer.Tick += Timer_Tick;
         }
         //thrust in N, pressure in PSI
         private void UpdateGraphs(double thrustVoltage, double calibratedThrust, double pressureVoltage, double calibratedPressure)
@@ -203,6 +210,61 @@ namespace Project_FREAK.Views
                     _sensorCheckWindow.WindowState = WindowState.Normal;
                 }
                 _sensorCheckWindow.Activate();
+            }
+        }
+        private void ArmButton_Click(object sender, RoutedEventArgs e)
+        {
+            //if armed, we need to disarm
+            if(LabJackHandleManager.Instance.GetArmedStatus())
+            {
+                LabJackHandleManager.Instance.ArmDisarmIgniter();
+                ArmButton.Background = Brushes.Green;
+                ArmTextBlock.Text = "Arm";
+                //lets also check if countdown has started, and cancel it if it has
+                if(_timerActive)
+                {
+                    _timer.Stop();
+                    _timerActive = false;
+                    StartTestTextBlock.Text = "Start";
+                }
+            }
+            else
+            {
+                //if disarmed, we need to arm
+                LabJackHandleManager.Instance.ArmDisarmIgniter();
+                ArmButton.Background = Brushes.Red;
+                ArmTextBlock.Text = "ARMED";
+            }
+        }
+        private void StartTestButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(_timerActive)
+            {
+                _timer.Stop();
+                StartTestTextBlock.Text = "Start";
+                _timerActive = false;
+            }
+            else if (_timerActive == false && LabJackHandleManager.Instance.GetArmedStatus())
+            {
+                _secondsremaining = 10;
+                _timerActive = true;
+                StartTestTextBlock.Text = $"00:{_secondsremaining}";
+                _timer.Start();
+            }
+        }
+        private void Timer_Tick(object sender, EventArgs e)
+        {
+            if(_secondsremaining > 0 )
+            {
+                _secondsremaining--;
+                StartTestTextBlock.Text = $"00:{_secondsremaining}";
+            }
+            else
+            {
+                _timer.Stop();
+                _timerActive = false;
+                //begin ignition
+                LabJackHandleManager.Instance.IgniteMotor();
             }
         }
     }

@@ -107,27 +107,29 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Buttons with scaling text -->
-                    <Button Grid.Row="0" Grid.Column="0" 
-                            Background="Green" 
-                            Margin="1"
-                            HorizontalAlignment="Stretch" 
-                            VerticalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch">
-                        <Viewbox Stretch="Uniform">
-                            <TextBlock Text="Start" Foreground="White" Margin="2"/>
-                        </Viewbox>
-                    </Button>
-
-                    <Button Grid.Row="0" Grid.Column="1" 
+                    <Button x:Name="StartButton" Grid.Row="0" Grid.Column="0" 
                             Background="Orange" 
                             Margin="1"
                             HorizontalAlignment="Stretch" 
                             VerticalAlignment="Stretch"
                             HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch">
+                            VerticalContentAlignment="Stretch"
+                            Click="StartTestButton_Click">
                         <Viewbox Stretch="Uniform">
-                            <TextBlock Text="Arm" Foreground="White" Margin="2"/>
+                            <TextBlock x:Name="StartTestTextBlock" Text="Start" Foreground="White" Margin="2"/>
+                        </Viewbox>
+                    </Button>
+
+                    <Button x:Name="ArmButton" Grid.Row="0" Grid.Column="1" 
+                            Background="Green" 
+                            Margin="1"
+                            HorizontalAlignment="Stretch" 
+                            VerticalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            Click="ArmButton_Click">
+                        <Viewbox Stretch="Uniform">
+                            <TextBlock x:Name="ArmTextBlock" Text="Arm" Foreground="White" Margin="2"/>
                         </Viewbox>
                     </Button>
 
@@ -146,7 +148,7 @@
                     </Button>
 
                     <Button Grid.Row="1" Grid.Column="1" 
-                            Background="Red" 
+                            Background="Purple" 
                             Margin="1"
                             HorizontalAlignment="Stretch" 
                             VerticalAlignment="Stretch"
