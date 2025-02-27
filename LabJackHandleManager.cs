@@ -137,6 +137,7 @@ namespace Project_FREAK
                 //stop reading, and close device
                 _isReading = false;
                 LJM.Close(_handle);
+                _instance = null;
                 _handle = -1;
             }
         }

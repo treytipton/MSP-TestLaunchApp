@@ -200,7 +200,17 @@ namespace Project_FREAK.Views
             if (_sensorCheckWindow == null)
             {
                 _sensorCheckWindow = new SensorCheckWindow();
-                _sensorCheckWindow.Closed += (s, args) => _sensorCheckWindow = null;
+                _sensorCheckWindow.Closed += (s, args) =>
+                {
+                    _sensorCheckWindow = null;
+
+                    // Force resubscription and refresh graphs when the window closes
+                    Dispatcher.Invoke(() =>
+                    {
+                        LabJackHandleManager.Instance.DataUpdated -= UpdateGraphs; // Prevent duplicate subscriptions
+                        LabJackHandleManager.Instance.DataUpdated += UpdateGraphs;
+                    });
+                };
                 _sensorCheckWindow.Show();
             }
             else

@@ -22,6 +22,53 @@ namespace Project_FREAK.Views
         public SensorCheckWindow()
         {
             InitializeComponent();
+            //begin to subscribe to labjack data updates through action
+            LabJackHandleManager.Instance.DataUpdated += UpdateSensors;
+            //check if a device is connected
+            UpdateLabjackStatus();
+
+        }
+        private void UpdateLabjackStatus()
+        {
+            if (LabJackHandleManager.Instance.IsDemo())
+            {
+                //in demo mode, update UI
+                DemoModeStatus.Text = "❌";
+                DemoModeStatus.Foreground = Brushes.Red;
+                DemoModeEnabledDisabled.Text = "Disconnected";
+                PressureTransducerStatus.Text = "❌";
+                PressureTransducerStatus.Foreground = Brushes.Red;
+                LoadCellStatus.Text = "❌";
+                LoadCellStatus.Foreground = Brushes.Red;
+            }
+            else
+            {
+                DemoModeEnabledDisabled.Text = "Connected";
+                DemoModeStatus.Foreground = Brushes.LimeGreen;
+                DemoModeStatus.Text = "✔️";
+                PressureTransducerStatus.Text = "✔️";
+                PressureTransducerStatus.Foreground = Brushes.LimeGreen;
+                LoadCellStatus.Text = "✔️";
+                LoadCellStatus.Foreground = Brushes.LimeGreen;
+
+            }
+        }
+        private void UpdateSensors(double thrustVoltage, double calibratedThrust, double pressureVoltage, double calibratedPressure)
+        {
+            //on an update, invoke ui thread to update with correct values. This will be replaced later with graphs of data.
+            Dispatcher.Invoke(() => {
+                LoadCellVoltage.Text = $"Voltage: {thrustVoltage:F6} V";
+                PressureTransducerVoltage.Text = $"Voltage: {pressureVoltage:F2} V";
+            });
+        }
+
+        private void ReconnectButton_Click(object sender, RoutedEventArgs e)
+        {
+            LabJackHandleManager.Instance.CloseDevice();
+            _ = LabJackHandleManager.Instance; //create LabJack device handle to reconnect to
+            UpdateLabjackStatus();
+            LabJackHandleManager.Instance.DataUpdated += UpdateSensors;
+            
         }
     }
 }
