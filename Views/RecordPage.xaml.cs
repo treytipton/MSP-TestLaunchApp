@@ -220,12 +220,15 @@ namespace Project_FREAK.Views
                 LabJackHandleManager.Instance.ArmDisarmIgniter();
                 ArmButton.Background = Brushes.Green;
                 ArmTextBlock.Text = "Arm";
+                StartTestTextBlock.Text = "Start";
+                StartTestTextBlock.TextDecorations = TextDecorations.Strikethrough;
+                StartButton.Background = Brushes.DarkGray;
                 //lets also check if countdown has started, and cancel it if it has
-                if(_timerActive)
+                if (_timerActive)
                 {
                     _timer.Stop();
                     _timerActive = false;
-                    StartTestTextBlock.Text = "Start";
+
                 }
             }
             else
@@ -233,6 +236,8 @@ namespace Project_FREAK.Views
                 //if disarmed, we need to arm
                 LabJackHandleManager.Instance.ArmDisarmIgniter();
                 ArmButton.Background = Brushes.Red;
+                StartButton.Background = Brushes.Orange;
+                StartTestTextBlock.TextDecorations = null;
                 ArmTextBlock.Text = "ARMED";
             }
         }

@@ -108,7 +108,7 @@
 
                     <!-- Buttons with scaling text -->
                     <Button x:Name="StartButton" Grid.Row="0" Grid.Column="0" 
-                            Background="Orange" 
+                            Background="DarkGray" 
                             Margin="1"
                             HorizontalAlignment="Stretch" 
                             VerticalAlignment="Stretch"
@@ -116,7 +116,7 @@
                             VerticalContentAlignment="Stretch"
                             Click="StartTestButton_Click">
                         <Viewbox Stretch="Uniform">
-                            <TextBlock x:Name="StartTestTextBlock" Text="Start" Foreground="White" Margin="2"/>
+                            <TextBlock x:Name="StartTestTextBlock" Text="Start" Foreground="White" Margin="2" TextDecorations="Strikethrough"/>
                         </Viewbox>
                     </Button>
 
