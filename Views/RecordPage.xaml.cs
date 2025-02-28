@@ -46,33 +46,45 @@ namespace Project_FREAK.Views
             this.Unloaded += RecordPage_Unloaded;
         }
         //thrust in N, pressure in PSI
+        private List<double> timeData = new List<double>();
+        private List<double> thrustData = new List<double>();
+        private List<double> pressureData = new List<double>();
+
+        private const double WindowSize = 10; // Sliding window size (e.g., 10 seconds)
         private void UpdateGraphs(double thrustVoltage, double calibratedThrust, double pressureVoltage, double calibratedPressure)
         {
-            // Calculate elapsed time in seconds
             double elapsedTime = (DateTime.Now - startTime).TotalSeconds;
 
+            // Store data points
+            timeData.Add(elapsedTime);
+            thrustData.Add(calibratedThrust);
+            pressureData.Add(calibratedPressure);
+
+            // Remove old data to maintain the sliding window
+            while (timeData.Count > 0 && timeData[0] < elapsedTime - WindowSize)
+            {
+                timeData.RemoveAt(0);
+                thrustData.RemoveAt(0);
+                pressureData.RemoveAt(0);
+            }
             Dispatcher.Invoke(() =>
             {
                 // Update Thrust Graph
                 ThrustGraph.Plot.Clear();
-                var thrustSignal = ThrustGraph.Plot.Add.Scatter(new double[] { elapsedTime }, new double[] { calibratedThrust });
+                ThrustGraph.Plot.Add.Scatter(timeData.ToArray(), thrustData.ToArray());
                 ThrustGraph.Plot.Axes.Bottom.Label.Text = "Time (s)";
                 ThrustGraph.Plot.Axes.Left.Label.Text = "Thrust (N)";
                 ThrustGraph.Plot.Title("Thrust Over Time");
-
-                // Ensure proper scaling for X-axis (time in seconds)
-                ThrustGraph.Plot.Axes.SetLimitsX(0, elapsedTime + 1); // Scale X-axis to show elapsed time range
+                ThrustGraph.Plot.Axes.SetLimitsX(Math.Max(0, elapsedTime - WindowSize), elapsedTime);
                 ThrustGraph.Refresh();
 
                 // Update Pressure Graph
                 PressureGraph.Plot.Clear();
-                var pressureSignal = PressureGraph.Plot.Add.Scatter(new double[] { elapsedTime }, new double[] { calibratedPressure });
+                PressureGraph.Plot.Add.Scatter(timeData.ToArray(), pressureData.ToArray());
                 PressureGraph.Plot.Axes.Bottom.Label.Text = "Time (s)";
                 PressureGraph.Plot.Axes.Left.Label.Text = "Pressure (PSI)";
                 PressureGraph.Plot.Title("Pressure Over Time");
-
-                // Ensure proper scaling for X-axis (time in seconds)
-                PressureGraph.Plot.Axes.SetLimitsX(0, elapsedTime + 1); // Scale X-axis to show elapsed time range
+                PressureGraph.Plot.Axes.SetLimitsX(Math.Max(0, elapsedTime - WindowSize), elapsedTime);
                 PressureGraph.Refresh();
             });
         }
