@@ -30,7 +30,7 @@ namespace Project_FREAK.Views
 
         private DispatcherTimer _timer;
         private bool _timerActive = false;
-        private int _secondsremaining = 5; //10 sec countdown by default
+        private int _secondsremaining = 5; //5 sec countdown by default
         // Importing the DeleteObject function from the gdi32.dll to release GDI objects (like HBITMAPs) in unmanaged code.
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
