@@ -30,7 +30,7 @@ namespace Project_FREAK.Views
 
         private DispatcherTimer _timer;
         private bool _timerActive = false;
-        private int _secondsremaining = 10; //10 sec countdown by default
+        private int _secondsremaining = 5; //10 sec countdown by default
         // Importing the DeleteObject function from the gdi32.dll to release GDI objects (like HBITMAPs) in unmanaged code.
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
@@ -261,7 +261,7 @@ namespace Project_FREAK.Views
             }
             else if (_timerActive == false && LabJackHandleManager.Instance.GetArmedStatus())
             {
-                _secondsremaining = 10;
+                _secondsremaining = 5;
                 _timerActive = true;
                 StartTestTextBlock.Text = $"00:{_secondsremaining}";
                 _timer.Start();
@@ -279,6 +279,7 @@ namespace Project_FREAK.Views
                 _timer.Stop();
                 _timerActive = false;
                 //begin ignition
+                StartTestTextBlock.Text = "Igniting Motor!";
                 LabJackHandleManager.Instance.IgniteMotor();
             }
         }

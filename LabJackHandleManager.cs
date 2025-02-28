@@ -18,6 +18,7 @@ namespace Project_FREAK
         private static LabJackHandleManager _instance;
         private bool _isReading;
         public event Action<double, double, double, double> DataUpdated;
+        private Timer _returnTimer;
         private LabJackHandleManager()
         {
             InitalizeLabJack();
@@ -75,11 +76,13 @@ namespace Project_FREAK
             //write 5v to igniter wire
             LJM.eWriteName(_handle, "DAC0", 5.0);
             //after 2.5 seconds, let's put dac0 back to 0V
-            Timer returnTimer = new Timer(ReturnToZero, null, 0, 2500);
+            _returnTimer = new Timer(ReturnToZero, null, 2500, Timeout.Infinite);
         }
         private void ReturnToZero(object state)
         {
             LJM.eWriteName(_handle, "DAC0", 0.0);
+            _returnTimer?.Dispose();
+            _returnTimer = null;
         }
         private void StartReading()
         {
