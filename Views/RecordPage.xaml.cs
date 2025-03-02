@@ -17,11 +17,10 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using OpenCvSharp;
 using OpenCvSharp.Extensions;
+using System.Windows.Threading;
 using ScottPlot;
 using ScottPlot.WPF;
 using ScottPlot.Plottables;
-
-
 
 namespace Project_FREAK.Views
 {
@@ -32,6 +31,9 @@ namespace Project_FREAK.Views
         private CancellationTokenSource? _cts; // Token source to cancel the capture loop
         private CancellationTokenSource? _loadingCts; // Token source to stop loading animation
 
+        private DispatcherTimer _timer;
+        private bool _timerActive = false;
+        private int _secondsremaining = 5; //5 sec countdown by default
         // Importing the DeleteObject function from the gdi32.dll to release GDI objects (like HBITMAPs) in unmanaged code.
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
@@ -44,6 +46,9 @@ namespace Project_FREAK.Views
             // Load webcam feed separately from the UI thread.
             this.Loaded += RecordPage_Loaded;
             this.Unloaded += RecordPage_Unloaded;
+            _timer = new DispatcherTimer();
+            _timer.Interval = TimeSpan.FromSeconds(1);
+            _timer.Tick += Timer_Tick;
         }
         //thrust in N, pressure in PSI
         private List<double> timeData = new List<double>();
@@ -232,7 +237,17 @@ namespace Project_FREAK.Views
             if (_sensorCheckWindow == null)
             {
                 _sensorCheckWindow = new SensorCheckWindow();
-                _sensorCheckWindow.Closed += (s, args) => _sensorCheckWindow = null;
+                _sensorCheckWindow.Closed += (s, args) =>
+                {
+                    _sensorCheckWindow = null;
+
+                    // Force resubscription and refresh graphs when the window closes
+                    Dispatcher.Invoke(() =>
+                    {
+                        LabJackHandleManager.Instance.DataUpdated -= UpdateGraphs; // Prevent duplicate subscriptions
+                        LabJackHandleManager.Instance.DataUpdated += UpdateGraphs;
+                    });
+                };
                 _sensorCheckWindow.Show();
             }
             else
@@ -242,6 +257,67 @@ namespace Project_FREAK.Views
                     _sensorCheckWindow.WindowState = WindowState.Normal;
                 }
                 _sensorCheckWindow.Activate();
+            }
+        }
+        private void ArmButton_Click(object sender, RoutedEventArgs e)
+        {
+            //if armed, we need to disarm
+            if(LabJackHandleManager.Instance.GetArmedStatus())
+            {
+                LabJackHandleManager.Instance.ArmDisarmIgniter();
+                ArmButton.Background = Brushes.Green;
+                ArmTextBlock.Text = "Arm";
+                StartTestTextBlock.Text = "Start";
+                StartTestTextBlock.TextDecorations = TextDecorations.Strikethrough;
+                StartButton.Background = Brushes.DarkGray;
+                //lets also check if countdown has started, and cancel it if it has
+                if (_timerActive)
+                {
+                    _timer.Stop();
+                    _timerActive = false;
+
+                }
+            }
+            else
+            {
+                //if disarmed, we need to arm
+                LabJackHandleManager.Instance.ArmDisarmIgniter();
+                ArmButton.Background = Brushes.Red;
+                StartButton.Background = Brushes.Orange;
+                StartTestTextBlock.TextDecorations = null;
+                ArmTextBlock.Text = "ARMED";
+            }
+        }
+        private void StartTestButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(_timerActive)
+            {
+                _timer.Stop();
+                StartTestTextBlock.Text = "Start";
+                _timerActive = false;
+            }
+            else if (_timerActive == false && LabJackHandleManager.Instance.GetArmedStatus())
+            {
+                _secondsremaining = 5;
+                _timerActive = true;
+                StartTestTextBlock.Text = $"00:{_secondsremaining}";
+                _timer.Start();
+            }
+        }
+        private void Timer_Tick(object sender, EventArgs e)
+        {
+            if(_secondsremaining > 0 )
+            {
+                _secondsremaining--;
+                StartTestTextBlock.Text = $"00:{_secondsremaining}";
+            }
+            else
+            {
+                _timer.Stop();
+                _timerActive = false;
+                //begin ignition
+                StartTestTextBlock.Text = "Igniting Motor!";
+                LabJackHandleManager.Instance.IgniteMotor();
             }
         }
     }
