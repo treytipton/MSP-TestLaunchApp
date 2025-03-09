@@ -27,106 +27,118 @@ namespace Project_FREAK.Views
     public partial class RecordPage : Page
     {
         private SensorCheckWindow? _sensorCheckWindow;
-        private VideoCapture? _capture; // VideoCapture object to access the webcam
-        private CancellationTokenSource? _cts; // Token source to cancel the capture loop
-        private CancellationTokenSource? _loadingCts; // Token source to stop loading animation
-
+        private VideoCapture? _capture;
+        private CancellationTokenSource? _cts;
+        private CancellationTokenSource? _loadingCts;
         private DispatcherTimer _timer;
         private bool _timerActive = false;
-        private int _secondsremaining = 5; //5 sec countdown by default
-        // Importing the DeleteObject function from the gdi32.dll to release GDI objects (like HBITMAPs) in unmanaged code.
+        private int _secondsRemaining = 5;
+        private DateTime _startTime = DateTime.Now;
+
+        private List<double> _timeData = new List<double>();
+        private List<double> _thrustData = new List<double>();
+        private List<double> _pressureData = new List<double>();
+
+        private const double WindowSize = 10; // Sliding window size in seconds
+
         [DllImport("gdi32.dll")]
         public static extern bool DeleteObject(IntPtr hObject);
-        private DateTime startTime = DateTime.Now;
+
         public RecordPage()
         {
             InitializeComponent();
-            //begin to subscribe to labjack data updates through action
             LabJackHandleManager.Instance.DataUpdated += UpdateGraphs;
-            // Load webcam feed separately from the UI thread.
             this.Loaded += RecordPage_Loaded;
             this.Unloaded += RecordPage_Unloaded;
-            _timer = new DispatcherTimer();
-            _timer.Interval = TimeSpan.FromSeconds(1);
+
+            _timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
             _timer.Tick += Timer_Tick;
         }
-        //thrust in N, pressure in PSI
-        private List<double> timeData = new List<double>();
-        private List<double> thrustData = new List<double>();
-        private List<double> pressureData = new List<double>();
 
-        private const double WindowSize = 10; // Sliding window size (e.g., 10 seconds)
+        // Updates the graphs with new data points.
         private void UpdateGraphs(double thrustVoltage, double calibratedThrust, double pressureVoltage, double calibratedPressure)
         {
-            double elapsedTime = (DateTime.Now - startTime).TotalSeconds;
+            double elapsedTime = (DateTime.Now - _startTime).TotalSeconds;
 
             // Store data points
-            timeData.Add(elapsedTime);
-            thrustData.Add(calibratedThrust);
-            pressureData.Add(calibratedPressure);
+            _timeData.Add(elapsedTime);
+            _thrustData.Add(calibratedThrust);
+            _pressureData.Add(calibratedPressure);
 
             // Remove old data to maintain the sliding window
-            while (timeData.Count > 0 && timeData[0] < elapsedTime - WindowSize)
+            while (_timeData.Count > 0 && _timeData[0] < elapsedTime - WindowSize)
             {
-                timeData.RemoveAt(0);
-                thrustData.RemoveAt(0);
-                pressureData.RemoveAt(0);
+                _timeData.RemoveAt(0);
+                _thrustData.RemoveAt(0);
+                _pressureData.RemoveAt(0);
             }
+
+            // Update the graphs on the UI thread
             Dispatcher.Invoke(() =>
             {
-                // Update Thrust Graph
-                ThrustGraph.Plot.Clear();
-                ThrustGraph.Plot.Add.Scatter(timeData.ToArray(), thrustData.ToArray());
-                ThrustGraph.Plot.Axes.Bottom.Label.Text = "Time (s)";
-                ThrustGraph.Plot.Axes.Left.Label.Text = "Thrust (N)";
-                ThrustGraph.Plot.Title("Thrust Over Time");
-                ThrustGraph.Plot.Axes.SetLimitsX(Math.Max(0, elapsedTime - WindowSize), elapsedTime);
-                ThrustGraph.Refresh();
-
-                // Update Pressure Graph
-                PressureGraph.Plot.Clear();
-                PressureGraph.Plot.Add.Scatter(timeData.ToArray(), pressureData.ToArray());
-                PressureGraph.Plot.Axes.Bottom.Label.Text = "Time (s)";
-                PressureGraph.Plot.Axes.Left.Label.Text = "Pressure (PSI)";
-                PressureGraph.Plot.Title("Pressure Over Time");
-                PressureGraph.Plot.Axes.SetLimitsX(Math.Max(0, elapsedTime - WindowSize), elapsedTime);
-                PressureGraph.Refresh();
+                UpdateGraph(ThrustGraph, _timeData, _thrustData, "Thrust (N)", "Thrust Over Time");
+                UpdateGraph(PressureGraph, _timeData, _pressureData, "Pressure (PSI)", "Pressure Over Time");
             });
         }
-        // Load the webcam input on a background thread and start the loading text animation.
+
+        // Updates a specific graph with new data.
+        private void UpdateGraph(WpfPlot plot, List<double> xData, List<double> yData, string yLabel, string title)
+        {
+            plot.Plot.Clear();
+            plot.Plot.Add.Scatter(xData.ToArray(), yData.ToArray());
+            plot.Plot.Axes.Bottom.Label.Text = "Time (s)";
+            plot.Plot.Axes.Left.Label.Text = yLabel;
+            plot.Plot.Title(title);
+            plot.Plot.Axes.SetLimitsX(Math.Max(0, xData.Last() - WindowSize), xData.Last());
+            plot.Refresh();
+        }
+
+        // Handles the page loaded event to initialize the webcam and start the capture loop.
         private async void RecordPage_Loaded(object sender, RoutedEventArgs e)
         {
-            _loadingCts = new CancellationTokenSource(); // Create a new cancellation token source
-
-            // Start the loading text animation asynchronously.
+            _loadingCts = new CancellationTokenSource();
             var loadingTask = AnimateLoadingText(_loadingCts.Token);
 
-            // Initialize the webcam on a background thread.
-            await Task.Run(() => InitializeWebcam());
-
-            // If the webcam was successfully initialized, hide the loading text.
-            await Dispatcher.BeginInvoke(new Action(() =>
+            try
             {
-                if (_capture != null && _capture.IsOpened())
+                await Task.Run(() => InitializeWebcam());
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() => LoadingTextBlock.Text = $"Error: {ex.Message}");
+                return;
+            }
+
+            Dispatcher.Invoke(() =>
+            {
+                if (_capture?.IsOpened() == true)
                 {
                     LoadingTextBlock.Visibility = Visibility.Collapsed;
                 }
-            }));
+                else
+                {
+                    LoadingTextBlock.Text = "Webcam Error";
+                }
+            });
 
-            // Start the capture loop only if the webcam is available.
-            if (_capture != null && _capture.IsOpened())
+            if (_capture?.IsOpened() == true)
             {
-                StartCaptureLoop();
+                _cts = new CancellationTokenSource();
+                // Start async capture loop
+                _ = CaptureLoop(_cts.Token);
             }
         }
 
-        // Animates the LoadingTextBlock until the webcam is ready or not found.
+        // Animates the loading text while the webcam is being initialized.
         private async Task AnimateLoadingText(CancellationToken token)
         {
             string[] loadingTexts = { "Loading.", "Loading..", "Loading..." };
             int index = 0;
 
-            while (!token.IsCancellationRequested) // Stop when cancellation is requested
+            while (!token.IsCancellationRequested)
             {
                 await Dispatcher.BeginInvoke(new Action(() =>
                 {
@@ -135,41 +147,47 @@ namespace Project_FREAK.Views
                 index++;
                 try
                 {
-                    await Task.Delay(350, token); // Allow cancellation
+                    await Task.Delay(350, token);
                 }
                 catch (TaskCanceledException)
                 {
-                    break; // Exit if canceled
+                    break;
                 }
             }
         }
 
-        // Initialize the webcam.
+        // Initializes the webcam.
         private void InitializeWebcam()
         {
-            _capture = new VideoCapture(0); // 0 for default camera, use a different number for other cameras.
-            if (_capture is null || !_capture.IsOpened())
+            try
+            {
+                _capture = new VideoCapture(0);
+                if (!_capture.IsOpened())
+                {
+                    throw new InvalidOperationException("Webcam not accessible");
+                }
+            }
+            catch (Exception ex)
             {
                 Dispatcher.Invoke(() =>
                 {
-                    LoadingTextBlock.Text = "No Webcam Found";
+                    LoadingTextBlock.Text = ex.Message;
                 });
-
-                _loadingCts?.Cancel(); // Stop the loading animation
-                return;
+                _loadingCts?.Cancel();
+                _capture?.Dispose();
+                _capture = null;
             }
         }
 
-        // Continuously capture frames from the webcam and update the UI.
+        // Starts the capture loop to continuously capture frames from the webcam.
         private async void StartCaptureLoop()
         {
-            if (_capture is null)
+            if (_capture == null)
                 return;
 
             _cts = new CancellationTokenSource();
             CancellationToken token = _cts.Token;
 
-            // Query the camera's FPS; default to 30 if the value is invalid.
             double cameraFps = _capture.Get(VideoCaptureProperties.Fps);
             if (cameraFps <= 0)
                 cameraFps = 30;
@@ -184,7 +202,7 @@ namespace Project_FREAK.Views
 
                     using (var frame = new Mat())
                     {
-                        _capture.Read(frame); // Capture a frame
+                        _capture.Read(frame);
                         if (!frame.Empty())
                         {
                             using (var bmp = frame.ToBitmap())
@@ -197,7 +215,6 @@ namespace Project_FREAK.Views
                                         IntPtr.Zero,
                                         Int32Rect.Empty,
                                         BitmapSizeOptions.FromEmptyOptions());
-                                    // Update the UI asynchronously.
                                     await Dispatcher.BeginInvoke(new Action(() =>
                                     {
                                         WebcamImage.Source = bitmap;
@@ -205,7 +222,7 @@ namespace Project_FREAK.Views
                                 }
                                 finally
                                 {
-                                    DeleteObject(hBitmap); // Free the unmanaged HBitmap
+                                    DeleteObject(hBitmap);
                                 }
                             }
                         }
@@ -219,10 +236,11 @@ namespace Project_FREAK.Views
             }
         }
 
-        // Cancel the capture loop and dispose of the webcam resources when the page unloads.
+        // Handles the page unloaded event to clean up resources.
         private void RecordPage_Unloaded(object sender, RoutedEventArgs e)
         {
             _cts?.Cancel();
+            _loadingCts?.Cancel();
 
             if (_capture != null)
             {
@@ -230,8 +248,12 @@ namespace Project_FREAK.Views
                 _capture.Dispose();
                 _capture = null;
             }
+
+            // Clear image source to prevent memory leaks
+            WebcamImage.Source = null;
         }
 
+        // Handles the Sensor Check button click event to open the SensorCheckWindow.
         private void SensorCheckButton_Click(object sender, RoutedEventArgs e)
         {
             if (_sensorCheckWindow == null)
@@ -240,11 +262,9 @@ namespace Project_FREAK.Views
                 _sensorCheckWindow.Closed += (s, args) =>
                 {
                     _sensorCheckWindow = null;
-
-                    // Force resubscription and refresh graphs when the window closes
                     Dispatcher.Invoke(() =>
                     {
-                        LabJackHandleManager.Instance.DataUpdated -= UpdateGraphs; // Prevent duplicate subscriptions
+                        LabJackHandleManager.Instance.DataUpdated -= UpdateGraphs;
                         LabJackHandleManager.Instance.DataUpdated += UpdateGraphs;
                     });
                 };
@@ -259,65 +279,131 @@ namespace Project_FREAK.Views
                 _sensorCheckWindow.Activate();
             }
         }
-        private void ArmButton_Click(object sender, RoutedEventArgs e)
-        {
-            //if armed, we need to disarm
-            if(LabJackHandleManager.Instance.GetArmedStatus())
-            {
-                LabJackHandleManager.Instance.ArmDisarmIgniter();
-                ArmButton.Background = Brushes.Green;
-                ArmTextBlock.Text = "Arm";
-                StartTestTextBlock.Text = "Start";
-                StartTestTextBlock.TextDecorations = TextDecorations.Strikethrough;
-                StartButton.Background = Brushes.DarkGray;
-                //lets also check if countdown has started, and cancel it if it has
-                if (_timerActive)
-                {
-                    _timer.Stop();
-                    _timerActive = false;
 
-                }
-            }
-            else
+        // Handles the Arm button click event to arm or disarm the igniter.
+        private async void ArmButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
             {
-                //if disarmed, we need to arm
-                LabJackHandleManager.Instance.ArmDisarmIgniter();
-                ArmButton.Background = Brushes.Red;
-                StartButton.Background = Brushes.Orange;
-                StartTestTextBlock.TextDecorations = null;
-                ArmTextBlock.Text = "ARMED";
+                bool isArmed = LabJackHandleManager.Instance.GetArmedStatus();
+                await Task.Run(() => LabJackHandleManager.Instance.ArmDisarmIgniter());
+
+                Dispatcher.Invoke(() =>
+                {
+                    if (isArmed)
+                    {
+                        ArmButton.Background = Brushes.Green;
+                        ArmTextBlock.Text = "Arm";
+                        StartTestTextBlock.Text = "Start";
+                        StartTestTextBlock.TextDecorations = TextDecorations.Strikethrough;
+                        StartButton.Background = Brushes.DarkGray;
+                        _timer.Stop();
+                        _timerActive = false;
+                    }
+                    else
+                    {
+                        ArmButton.Background = Brushes.Red;
+                        StartButton.Background = Brushes.Orange;
+                        StartTestTextBlock.TextDecorations = null;
+                        ArmTextBlock.Text = "ARMED";
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() => MessageBox.Show($"Error: {ex.Message}"));
             }
         }
+
+        // Handles the Start Test button click event to start or stop the countdown timer.
         private void StartTestButton_Click(object sender, RoutedEventArgs e)
         {
-            if(_timerActive)
+            if (_timerActive)
             {
                 _timer.Stop();
                 StartTestTextBlock.Text = "Start";
                 _timerActive = false;
             }
-            else if (_timerActive == false && LabJackHandleManager.Instance.GetArmedStatus())
+            else if (!_timerActive && LabJackHandleManager.Instance.GetArmedStatus())
             {
-                _secondsremaining = 5;
+                _secondsRemaining = 5;
                 _timerActive = true;
-                StartTestTextBlock.Text = $"00:{_secondsremaining}";
+                StartTestTextBlock.Text = $"00:{_secondsRemaining}";
                 _timer.Start();
             }
         }
+
+        // Handles the timer tick event to update the countdown and ignite the motor.
         private void Timer_Tick(object sender, EventArgs e)
         {
-            if(_secondsremaining > 0 )
+            if (_secondsRemaining > 0)
             {
-                _secondsremaining--;
-                StartTestTextBlock.Text = $"00:{_secondsremaining}";
+                _secondsRemaining--;
+                StartTestTextBlock.Text = $"00:{_secondsRemaining}";
             }
             else
             {
                 _timer.Stop();
                 _timerActive = false;
-                //begin ignition
                 StartTestTextBlock.Text = "Igniting Motor!";
-                LabJackHandleManager.Instance.IgniteMotor();
+                Task.Run(() => LabJackHandleManager.Instance.IgniteMotor());
+            }
+        }
+
+        private async Task CaptureLoop(CancellationToken token)
+        {
+            if (_capture == null)
+                return;
+
+            double cameraFps = _capture.Get(VideoCaptureProperties.Fps);
+            if (cameraFps <= 0)
+                cameraFps = 30;
+            int delay = (int)(1000 / cameraFps);
+
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    if (_capture == null || !_capture.IsOpened())
+                        break;
+
+                    using (var frame = new Mat())
+                    {
+                        _capture.Read(frame);
+                        if (!frame.Empty())
+                        {
+                            using (var bmp = frame.ToBitmap())
+                            {
+                                IntPtr hBitmap = bmp.GetHbitmap();
+                                try
+                                {
+                                    BitmapSource bitmap = Imaging.CreateBitmapSourceFromHBitmap(
+                                        hBitmap,
+                                        IntPtr.Zero,
+                                        Int32Rect.Empty,
+                                        BitmapSizeOptions.FromEmptyOptions());
+
+                                    // Freeze the bitmap to enable cross-thread access
+                                    bitmap.Freeze();
+
+                                    await Dispatcher.InvokeAsync(() =>
+                                    {
+                                        WebcamImage.Source = bitmap;
+                                    });
+                                }
+                                finally
+                                {
+                                    DeleteObject(hBitmap);
+                                }
+                            }
+                        }
+                    }
+                    await Task.Delay(delay, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Handle cancellation
             }
         }
     }
