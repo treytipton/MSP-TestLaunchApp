@@ -21,6 +21,9 @@ using System.Windows.Threading;
 using ScottPlot;
 using ScottPlot.WPF;
 using ScottPlot.Plottables;
+using System.Text.Json;
+using System.IO;
+using Microsoft.Win32;
 
 namespace Project_FREAK.Views
 {
@@ -56,36 +59,69 @@ namespace Project_FREAK.Views
                 Interval = TimeSpan.FromSeconds(1)
             };
             _timer.Tick += Timer_Tick;
+            ThrustDataLogger = ThrustGraph.Plot.Add.DataLogger();
+            ThrustDataLogger.ViewSlide(windowSize);
+            ThrustGraph.Plot.Axes.Bottom.Label.Text = "Time (s)";
+            ThrustGraph.Plot.Axes.Left.Label.Text = "Thrust (N)";
+            ThrustGraph.Plot.Title("Thrust Over Time");
+            ThrustGraph.Plot.Axes.AutoScaleY();  // Auto-scale the Y-axis
+            PressureDataLogger = PressureGraph.Plot.Add.DataLogger();
+            PressureDataLogger.ViewSlide(windowSize);
+            PressureGraph.Plot.Axes.Bottom.Label.Text = "Time (s)";
+            PressureGraph.Plot.Axes.Left.Label.Text = "Pressure (PSI)";
+            PressureGraph.Plot.Title("Pressure Over Time");
+            PressureGraph.Plot.Axes.AutoScaleY();  // Auto-scale the Y-axis
+            UpdatePlotTimer = new DispatcherTimer();
+            UpdatePlotTimer.Interval = TimeSpan.FromMilliseconds(50);
+            UpdatePlotTimer.Tick += (s, e) =>
+            {
+                PressureGraph.Refresh();
+                ThrustGraph.Refresh();
+            };
+            UpdatePlotTimer.Start();
         }
 
-        // Updates the graphs with new data points.
+        //thrust in N, pressure in PSI
         private void UpdateGraphs(double thrustVoltage, double calibratedThrust, double pressureVoltage, double calibratedPressure)
         {
-            double elapsedTime = (DateTime.Now - _startTime).TotalSeconds;
-
+            if (_isSaving) return; // Prevent updates while saving
+            elapsedTime = (DateTime.Now - startTime).TotalSeconds;
             // Store data points
-            _timeData.Add(elapsedTime);
-            _thrustData.Add(calibratedThrust);
-            _pressureData.Add(calibratedPressure);
+            timeData.Add(elapsedTime);
+            thrustData.Add(calibratedThrust);
+            pressureData.Add(calibratedPressure);
+            rawPressureData.Add(pressureVoltage);
+            rawThrustData.Add(thrustVoltage);
 
-            // Remove old data to maintain the sliding window
-            while (_timeData.Count > 0 && _timeData[0] < elapsedTime - WindowSize)
-            {
-                _timeData.RemoveAt(0);
-                _thrustData.RemoveAt(0);
-                _pressureData.RemoveAt(0);
-            }
-
-            // Update the graphs on the UI thread
             Dispatcher.Invoke(() =>
             {
-                UpdateGraph(ThrustGraph, _timeData, _thrustData, "Thrust (N)", "Thrust Over Time");
-                UpdateGraph(PressureGraph, _timeData, _pressureData, "Pressure (PSI)", "Pressure Over Time");
+                if (_isSaving) return; // Double-check before updating UI
+                // Update Thrust Graph
+                ThrustDataLogger.Add(elapsedTime, calibratedThrust);
+
+                // Update Pressure Graph
+                PressureDataLogger.Add(elapsedTime, calibratedPressure);
             });
         }
 
-        // Updates a specific graph with new data.
-        private void UpdateGraph(WpfPlot plot, List<double> xData, List<double> yData, string yLabel, string title)
+        private void ExportDataToJson(string filePath)
+        {
+            var data = new
+            {
+                time_values_seconds = timeData,
+                thrust_values_N = thrustData,
+                pressure_values_PSI = pressureData,
+                load_cell_voltages_mv = rawThrustData,  // Assuming thrust data corresponds to load cell voltages (in mV)
+                pressure_transducer_voltages_v = rawPressureData // Assuming pressure data corresponds to transducer voltages (in V)
+            };
+
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            string json = JsonSerializer.Serialize(data, options);
+
+            File.WriteAllText(filePath, json);
+        }
+        // Load the webcam input on a background thread and start the loading text animation.
+        private async void RecordPage_Loaded(object sender, RoutedEventArgs e)
         {
             plot.Plot.Clear();
             plot.Plot.Add.Scatter(xData.ToArray(), yData.ToArray());
@@ -159,24 +195,20 @@ namespace Project_FREAK.Views
         // Initializes the webcam.
         private void InitializeWebcam()
         {
-            try
-            {
-                _capture = new VideoCapture(0);
-                if (!_capture.IsOpened())
-                {
-                    throw new InvalidOperationException("Webcam not accessible");
-                }
-            }
-            catch (Exception ex)
+            string rtspUrl = "rtsp://admin:MSPMOTORTEST2025@192.168.20.4:554/cam/realmonitor?channel=1&subtype=0";
+
+            _capture = new VideoCapture(rtspUrl); // 0 for default camera, use a different number for other cameras.
+            if (_capture is null || !_capture.IsOpened())
             {
                 Dispatcher.Invoke(() =>
                 {
-                    LoadingTextBlock.Text = ex.Message;
+                    LoadingTextBlock.Text = "No RTSP stream Found";
                 });
                 _loadingCts?.Cancel();
                 _capture?.Dispose();
                 _capture = null;
             }
+            _capture.Set(VideoCaptureProperties.BufferSize, 1);
         }
 
         // Starts the capture loop to continuously capture frames from the webcam.
@@ -202,7 +234,9 @@ namespace Project_FREAK.Views
 
                     using (var frame = new Mat())
                     {
-                        _capture.Read(frame);
+                        //_capture.Read(frame); // Capture a frame
+                        _capture.Grab();
+                        _capture.Retrieve(frame);
                         if (!frame.Empty())
                         {
                             using (var bmp = frame.ToBitmap())
@@ -405,6 +439,32 @@ namespace Project_FREAK.Views
             {
                 // Handle cancellation
             }
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Prevent updates to the graphs during saving
+            _isSaving = true;
+
+            // Create and show SaveFileDialog for selecting file path
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "JSON files (*.json)|*.json",
+                Title = "Save Data as JSON",
+                FileName = "data_export.json"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                string filePath = saveFileDialog.FileName;
+
+                // Export the data to JSON file
+                ExportDataToJson(filePath);
+                MessageBox.Show("Data successfully saved!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+
+            // Re-enable graph updates after saving
+            _isSaving = false;
         }
     }
 }
