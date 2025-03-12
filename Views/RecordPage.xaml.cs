@@ -59,6 +59,11 @@ namespace Project_FREAK.Views
             InitializeComponent();
             //begin to subscribe to labjack data updates through action
             LabJackHandleManager.Instance.DataUpdated += UpdateGraphs;
+
+            // Subscribe to the AppliedSettingsChanged event to update the UI when settings are changed.
+            ((App)Application.Current).SettingsManager.AppliedSettingsChanged += SettingsChangedHandler;
+
+
             // Load webcam feed separately from the UI thread.
             this.Loaded += RecordPage_Loaded;
             this.Unloaded += RecordPage_Unloaded;
@@ -180,20 +185,57 @@ namespace Project_FREAK.Views
         // Initialize the webcam.
         private void InitializeWebcam()
         {
-            string rtspUrl = "rtsp://admin:MSPMOTORTEST2025@192.168.20.4:554/cam/realmonitor?channel=1&subtype=0";
+            var settingsManager = ((App)Application.Current).SettingsManager;
+            bool demoMode = settingsManager.AppliedSettings.DemoModeEnabled;
 
-            _capture = new VideoCapture(rtspUrl); // 0 for default camera, use a different number for other cameras.
-            if (_capture is null || !_capture.IsOpened())
+            try
+            {
+                if (demoMode)
+                {
+                    _capture = new VideoCapture(0);
+                    Dispatcher.Invoke(() =>
+                    {
+                        LoadingTextBlock.Text = "Demo Mode: Local Webcam";
+                        LoadingTextBlock.Visibility = Visibility.Visible;
+                    });
+                }
+                else
+                {
+                    string rtspUrl = "rtsp://admin:MSPMOTORTEST2025@192.168.20.4:554/cam/realmonitor?channel=1&subtype=0";
+                    _capture = new VideoCapture(rtspUrl);
+
+                    if (!_capture.IsOpened())
+                    {
+                        var timeoutTask = Task.Delay(2500);
+                        var openTask = Task.Run(() => _capture.Open(rtspUrl));
+                        Task.WaitAny(openTask, timeoutTask);
+                    }
+                }
+
+                if (_capture?.IsOpened() == true)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        LoadingTextBlock.Visibility = Visibility.Collapsed;
+                    });
+                    _capture.Set(VideoCaptureProperties.BufferSize, 1);
+                }
+                else
+                {
+                    throw new Exception("Camera not available");
+                }
+            }
+            catch
             {
                 Dispatcher.Invoke(() =>
                 {
-                    LoadingTextBlock.Text = "No RTSP stream Found";
+                    LoadingTextBlock.Text = "Camera not available";
+                    LoadingTextBlock.Visibility = Visibility.Visible;
                 });
-
-                _loadingCts?.Cancel(); // Stop the loading animation
-                return;
+                _loadingCts?.Cancel();
+                _capture?.Dispose();
+                _capture = null;
             }
-            _capture.Set(VideoCaptureProperties.BufferSize, 1);
         }
 
         // Continuously capture frames from the webcam and update the UI.
@@ -260,8 +302,8 @@ namespace Project_FREAK.Views
         // Cancel the capture loop and dispose of the webcam resources when the page unloads.
         private void RecordPage_Unloaded(object sender, RoutedEventArgs e)
         {
+            ((App)Application.Current).SettingsManager.AppliedSettingsChanged -= SettingsChangedHandler;
             _cts?.Cancel();
-
             if (_capture != null)
             {
                 _capture.Release();
@@ -383,6 +425,47 @@ namespace Project_FREAK.Views
 
             // Re-enable graph updates after saving
             _isSaving = false;
+        }
+
+        private async void SettingsChangedHandler(object? sender, EventArgs e)
+        {
+            await Dispatcher.InvokeAsync(async () =>
+            {
+                // Cancel any existing operations
+                _cts?.Cancel();
+                _loadingCts?.Cancel();
+
+                // Cleanup existing camera
+                if (_capture != null)
+                {
+                    _capture.Release();
+                    _capture.Dispose();
+                    _capture = null;
+                }
+
+                // Reset UI state
+                LoadingTextBlock.Visibility = Visibility.Visible;
+                WebcamImage.Source = null;
+
+                // Reinitialize with loading animation
+                _loadingCts = new CancellationTokenSource();
+                var loadingTask = AnimateLoadingText(_loadingCts.Token);
+
+                try
+                {
+                    await Task.Run(() => InitializeWebcam());
+                    if (_capture?.IsOpened() == true)
+                    {
+                        StartCaptureLoop();
+                        LoadingTextBlock.Visibility = Visibility.Collapsed; // Additional safety
+                    }
+                }
+                catch
+                {
+                    LoadingTextBlock.Text = "Camera initialization failed";
+                    LoadingTextBlock.Visibility = Visibility.Visible;
+                }
+            });
         }
     }
 }
