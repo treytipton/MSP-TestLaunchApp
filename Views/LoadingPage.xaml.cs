@@ -15,10 +15,12 @@ using System.Windows.Shapes;
 
 namespace Project_FREAK.Views
 {
-    /// Interaction logic for ReplayPage.xaml
-    public partial class ReplayPage : Page
+    /// <summary>
+    /// Interaction logic for LoadingPage.xaml
+    /// </summary>
+    public partial class LoadingPage : Page
     {
-        public ReplayPage()
+        public LoadingPage()
         {
             InitializeComponent();
         }

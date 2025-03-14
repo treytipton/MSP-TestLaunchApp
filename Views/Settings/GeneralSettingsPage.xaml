@@ -5,48 +5,49 @@
       Background="#1E1E1E">
 
     <Grid Margin="20">
-        <StackPanel Orientation="Vertical" VerticalAlignment="Top">
-            <!-- Page Header -->
-            <TextBlock Text="General Settings" 
-                       Foreground="White" 
-                       FontSize="24" 
-                       FontWeight="Bold" 
-                       Margin="0,0,0,20"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-            <!-- Placeholder Setting: Enable Notifications -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="Example Setting 1:" 
-                           Foreground="White" 
-                           Width="200" VerticalAlignment="Center"/>
-                <CheckBox IsChecked="True" VerticalAlignment="Center"/>
-            </StackPanel>
+        <!-- Header -->
+        <TextBlock Text="General Settings" 
+                   Foreground="White" 
+                   FontSize="24" 
+                   FontWeight="Bold"
+                   Grid.Row="0"/>
 
-            <!-- Placeholder Setting: Start with Windows -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="Example Setting 2:" 
+        <!-- Settings Content -->
+        <StackPanel Grid.Row="1" Margin="0,20,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                <TextBlock Text="Demo Mode:" 
                            Foreground="White" 
-                           Width="200" VerticalAlignment="Center"/>
-                <CheckBox VerticalAlignment="Center"/>
+                           Width="150"
+                           VerticalAlignment="Center"/>
+                <CheckBox x:Name="DemoModeCheckBox"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding DemoModeEnabled}"/>
             </StackPanel>
+        </StackPanel>
 
-            <!-- Placeholder Setting: Auto-Update -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="Example Setting 3:" 
-                           Foreground="White" 
-                           Width="200" VerticalAlignment="Center"/>
-                <CheckBox IsChecked="True" VerticalAlignment="Center"/>
-            </StackPanel>
+        <!-- Buttons Section -->
+        <StackPanel Grid.Row="2" 
+            Orientation="Horizontal" 
+            HorizontalAlignment="Right"
+            Margin="0,20,0,0">
+            <Button x:Name="ApplyButton"
+            Content="Apply"
+            Width="100"
+            Height="30"
+            Margin="0,0,10,0"
+            Click="ApplyButton_Click"/>
 
-            <!-- Placeholder Setting: Theme Selection -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                <TextBlock Text="Example Setting 4:" 
-                           Foreground="White" 
-                           Width="200" VerticalAlignment="Center"/>
-                <ComboBox Width="150" VerticalAlignment="Center">
-                    <ComboBoxItem Content="Option 1" IsSelected="True"/>
-                    <ComboBoxItem Content="Option 2"/>
-                </ComboBox>
-            </StackPanel>
+            <Button x:Name="SaveButton"
+            Content="Save"
+            Width="100"
+            Height="30"
+            Click="SaveButton_Click"/>
         </StackPanel>
     </Grid>
 </Page>
