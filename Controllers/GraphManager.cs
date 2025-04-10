@@ -9,6 +9,8 @@ namespace Project_FREAK.Controllers
     {
         private readonly DataLogger _thrustLogger;
         private readonly DataLogger _pressureLogger;
+        private readonly DataStreamer _thrustStreamer;
+        private readonly DataStreamer _pressureStreamer;
         private readonly WpfPlot _thrustGraph;
         private readonly WpfPlot _pressureGraph;
         private const double WindowSize = 10; // Size of the window for displaying data
@@ -19,28 +21,32 @@ namespace Project_FREAK.Controllers
             _pressureGraph = pressureGraph;
 
             // Initialize the graphs with titles and labels
-            _thrustLogger = InitializeGraph(_thrustGraph, "Thrust Over Time", "Thrust (N)");
-            _pressureLogger = InitializeGraph(_pressureGraph, "Pressure Over Time", "Pressure (PSI)");
+            _thrustStreamer = InitializeGraph(_thrustGraph, "Thrust Over Time", "Thrust (N)");
+            _pressureStreamer = InitializeGraph(_pressureGraph, "Pressure Over Time", "Pressure (PSI)");
         }
 
         // Initializes a graph with a title and y-axis label
-        private DataLogger InitializeGraph(WpfPlot graph, string title, string yLabel)
+        private DataStreamer InitializeGraph(WpfPlot graph, string title, string yLabel)
         {
             graph.Plot.Title(title);
-            graph.Plot.Axes.Bottom.Label.Text = "Time (s)";
+            graph.Plot.Axes.Bottom.Label.Text = "Data Points";
             graph.Plot.Axes.Left.Label.Text = yLabel;
-            graph.Plot.Axes.AutoScaleY(); // Enable auto-scaling for the y-axis
+            //graph.Plot.Axes.AutoScaleY(); // Enable auto-scaling for the y-axis
+            graph.Plot.Axes.ContinuouslyAutoscale = false;
 
-            var logger = graph.Plot.Add.DataLogger();
-            logger.ViewSlide(WindowSize); // Set the view window size
-            return logger;
+            var streamer = graph.Plot.Add.DataStreamer(1000);
+            streamer.ViewScrollLeft();
+            streamer.ManageAxisLimits = true;
+
+            return streamer;
         }
 
         // Adds a data point to the thrust and pressure graphs
         public void AddDataPoint(double time, double thrust, double pressure)
         {
-            _thrustLogger.Add(time, thrust);
-            _pressureLogger.Add(time, pressure);
+            _thrustStreamer.Add(thrust);
+            _pressureStreamer.Add(pressure);
+
             RefreshGraphs(); // Refresh the graphs to display the new data
         }
 
@@ -54,8 +60,8 @@ namespace Project_FREAK.Controllers
         // Clears the data from the graphs
         public void ClearGraphs()
         {
-            _thrustLogger.Clear();
-            _pressureLogger.Clear();
+            _thrustStreamer.Clear();
+            _pressureStreamer.Clear();
             RefreshGraphs();
         }
     }
