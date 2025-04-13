@@ -7,13 +7,11 @@ namespace Project_FREAK.Controllers
 {
     public class GraphManager
     {
-        private readonly DataLogger _thrustLogger;
-        private readonly DataLogger _pressureLogger;
         private readonly DataStreamer _thrustStreamer;
         private readonly DataStreamer _pressureStreamer;
         private readonly WpfPlot _thrustGraph;
         private readonly WpfPlot _pressureGraph;
-        private const double WindowSize = 10; // Size of the window for displaying data
+        private const int WindowSize = 2500; // Size of the window for displaying data
 
         public GraphManager(WpfPlot thrustGraph, WpfPlot pressureGraph)
         {
@@ -34,7 +32,7 @@ namespace Project_FREAK.Controllers
             //graph.Plot.Axes.AutoScaleY(); // Enable auto-scaling for the y-axis
             graph.Plot.Axes.ContinuouslyAutoscale = false;
 
-            var streamer = graph.Plot.Add.DataStreamer(1000);
+            var streamer = graph.Plot.Add.DataStreamer(WindowSize);
             streamer.ViewScrollLeft();
             streamer.ManageAxisLimits = true;
 
