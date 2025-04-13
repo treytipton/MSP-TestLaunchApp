@@ -26,7 +26,6 @@ namespace Project_FREAK.Views
         private bool _isSaving = false;
         private bool _isRecording = false; // Flag to indicate if recording is in progress
         private const int graphFPS = 30;
-
         private string? _currentSessionFolder;
         private string? _currentVideoPath;
 
@@ -122,7 +121,10 @@ namespace Project_FREAK.Views
                 {
                     while (_dataQueue.TryDequeue(out var dataPoint))
                     {
-                        _dataRecorder.AddDataPoint(dataPoint.time, dataPoint.thrust, dataPoint.pressure, dataPoint.thrustVoltage, dataPoint.pressureVoltage); // Add data point to recorder
+                        if (_isRecording)
+                        {
+                            _dataRecorder.AddDataPoint(dataPoint.time, dataPoint.thrust, dataPoint.pressure, dataPoint.thrustVoltage, dataPoint.pressureVoltage); // Add data point to recorder
+                        }
                         _graphManager.AddDataPoint(dataPoint.time, dataPoint.thrust, dataPoint.pressure); // Add data point to graphs
                     }
                     _graphUpdateStopwatch.Restart(); // Restart the stopwatch for graph updates

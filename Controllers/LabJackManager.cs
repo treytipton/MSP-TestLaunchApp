@@ -7,6 +7,7 @@ using LabJack;
 using System.Threading;
 using System.Reflection.Metadata;
 using System.Xml.Linq;
+using System.Windows;
 
 namespace Project_FREAK.Controllers
 {
@@ -19,11 +20,9 @@ namespace Project_FREAK.Controllers
         private bool _isReading; // Indicates if data is being read from the device
         public event Action<double, double, double, double> DataUpdated = delegate { }; // Event triggered when data is updated
         private Timer? _returnTimer; // Timer to return DAC0 to zero
-
         private LabJackManager()
         {
             InitalizeLabJack(); // Initialize the LabJack device
-            Task.Run(() => InitalizeLabJack()); // Initialize LabJack on a background thread.
             StartReading(); // Start reading data from the device
         }
 
@@ -51,6 +50,7 @@ namespace Project_FREAK.Controllers
             {
                 // Open in demo mode if device not found
                 LJM.OpenS("ANY", "ANY", "LJM_DEMO_MODE", ref _handle);
+                MessageBox.Show("No LabJack device was detected. Please ensure proper connection and network settings, then relaunch. The application will now open in Demo Mode.");
                 _isDemo = true;
             }
         }
@@ -130,10 +130,9 @@ namespace Project_FREAK.Controllers
                     calibratedLoad *= 9.81; // Convert from kg to N
 
                     // Convert voltage to pressure
-                    // Pressure transducer 0.5 V = 0 PSI, 4.5 V = 1600 PSI, linear scaling
+                    // Pressure transducer 0.5 V = 0 PSI, 4.5 V = 1600 PSI, linear scaling. Scaling factor = max pressure / (maxvoltage-minvoltage) ; scaling = 1600 / (4.5-0.5 ) = 400
                     double pressureAdjustedVoltage = pressureVoltage - 0.5;
-                    double pressure = pressureAdjustedVoltage * 4;
-
+                    double pressure = pressureAdjustedVoltage * 400;
                     // Invoke action, pass values onto subscribers
                     DataUpdated?.Invoke(thrustVoltage, calibratedLoad, pressureVoltage, pressure);
                 }
