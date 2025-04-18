@@ -11,6 +11,7 @@ public class SettingsManager : INotifyPropertyChanged
     public event EventHandler? AppliedSettingsChanged;
 
     // Paths to the settings files
+
     private static readonly string SavedSettingsPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory,
         "Assets", "CONFIG", "saved_settings.json");
@@ -28,6 +29,7 @@ public class SettingsManager : INotifyPropertyChanged
         {
             _appliedSettings = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(AppliedSettings))); // Notify when AppliedSettings changes
+
         }
     }
 
@@ -47,10 +49,12 @@ public class SettingsManager : INotifyPropertyChanged
                 var json = File.ReadAllText(SavedSettingsPath);
                 var settings = JsonSerializer.Deserialize<SettingsData>(json);
                 AppliedSettings = settings ?? new SettingsData(); // Set AppliedSettings to the loaded settings or a new instance if null
+
             }
         }
         catch { /* Handle errors */ }
     }
+
 
     // Saves the applied settings to disk
     public void SaveAppliedSettingsToDisk()
@@ -59,6 +63,7 @@ public class SettingsManager : INotifyPropertyChanged
         {
             var json = JsonSerializer.Serialize(AppliedSettings);
             Directory.CreateDirectory(Path.GetDirectoryName(SavedSettingsPath)!); // Ensure the directory exists
+
             File.WriteAllText(SavedSettingsPath, json);
         }
         catch { /* Handle errors */ }
