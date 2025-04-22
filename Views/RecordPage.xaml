@@ -94,7 +94,6 @@
                       Margin="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -125,33 +124,6 @@
                             Click="ArmButton_Click">
                         <Viewbox Stretch="Uniform">
                             <TextBlock x:Name="ArmTextBlock" Text="Arm" Foreground="White" Margin="2"/>
-                        </Viewbox>
-                    </Button>
-
-                    <Button Grid.Row="1" Grid.Column="0" 
-                            Background="Blue" 
-                            Margin="1"
-                            HorizontalAlignment="Stretch" 
-                            VerticalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch"
-                            Click="SensorCheckButton_Click">
-                            
-                        <Viewbox Stretch="Uniform">
-                            <TextBlock Text="Sensor Check" Foreground="White" Margin="2"/>
-                        </Viewbox>
-                    </Button>
-
-                    <Button x:Name="SaveButton" Grid.Row="1" Grid.Column="1" 
-                            Background="Purple" 
-                            Margin="1"
-                            HorizontalAlignment="Stretch" 
-                            VerticalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch"
-                            VerticalContentAlignment="Stretch"
-                            Click="SaveButton_Click">
-                        <Viewbox Stretch="Uniform">
-                            <TextBlock Text="Save" Foreground="White" Margin="2"/>
                         </Viewbox>
                     </Button>
                 </Grid>

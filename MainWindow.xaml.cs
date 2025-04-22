@@ -16,6 +16,8 @@ namespace Project_FREAK
 {
     public partial class MainWindow : Window
     {
+        private SensorCheckWindow? _sensorCheckWindow;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -57,6 +59,20 @@ namespace Project_FREAK
         private void RecordMenuItem_Click(object sender, RoutedEventArgs e)
         {
             NavigateToPage(new RecordPage());
+        }
+
+        private void SensorCheckMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (_sensorCheckWindow == null)
+            {
+                _sensorCheckWindow = new SensorCheckWindow();
+                _sensorCheckWindow.Closed += (s, args) => _sensorCheckWindow = null;
+                _sensorCheckWindow.Show();
+            }
+            else
+            {
+                _sensorCheckWindow.Activate();
+            }
         }
     }
 }

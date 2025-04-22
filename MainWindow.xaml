@@ -12,6 +12,7 @@
             <!-- Persistent Menu that stays even when you navigate to a different page -->
             <Menu x:Name="MainMenu" DockPanel.Dock="Top" Background="DarkGray">
                 <MenuItem Header="Settings" Click="SettingsMenuItem_Click"/>
+                <MenuItem Header="Sensor Check" Click="SensorCheckMenuItem_Click"/>
             </Menu>
             <!-- Frame for Navigation -->
             <Frame x:Name="MainFrame" NavigationUIVisibility="Hidden"/>
