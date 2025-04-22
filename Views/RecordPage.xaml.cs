@@ -171,8 +171,8 @@ namespace Project_FREAK.Views
         {
             if (_labjackManager.GetArmedStatus() && !_isRecording)
             {
-                _countdownService.ToggleCountdown(5); // Start the countdown if the igniter is armed
-            } 
+                _countdownService.ToggleCountdown(5);
+            }
             else if (_isRecording)
             {
                 _webcamManager.StopRecording();
@@ -180,8 +180,38 @@ namespace Project_FREAK.Views
                 StartTestTextBlock.Text = "Start";
                 StartButton.Background = Brushes.Green;
 
+                // Auto-save data
+                if (_currentSessionFolder != null)
+                {
+                    SaveData();
+                }
+
                 _currentSessionFolder = null;
                 _currentVideoPath = null;
+            }
+        }
+
+        private void SaveData()
+        {
+            try
+            {
+                _isSaving = true;
+                var jsonFileName = $"data_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
+                var jsonPath = Path.Combine(_currentSessionFolder!, jsonFileName);
+
+                _dataRecorder.ExportToJson(jsonPath);
+
+                MessageBox.Show($"Data and video saved in:\n{_currentSessionFolder}", "Success",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error saving data: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally
+            {
+                _isSaving = false;
             }
         }
 
@@ -260,21 +290,6 @@ namespace Project_FREAK.Views
                     LoadingTextBlock.Text = $"Camera Error: {ex.Message}";
                     LoadingTextBlock.Visibility = Visibility.Visible;
                 });
-            }
-        }
-
-        // Handles the click event of the Sensor Check button
-        private void SensorCheckButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (_sensorCheckWindow == null)
-            {
-                _sensorCheckWindow = new SensorCheckWindow();
-                _sensorCheckWindow.Closed += (s, args) => _sensorCheckWindow = null; // Reset the window reference when closed
-                _sensorCheckWindow.Show(); // Show the sensor check window
-            }
-            else
-            {
-                _sensorCheckWindow.Activate(); // Activate the existing sensor check window
             }
         }
 
