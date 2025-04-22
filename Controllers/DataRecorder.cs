@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json;
 using System.IO;
+using ScottPlot;
 
 namespace Project_FREAK.Controllers
 {
@@ -13,32 +14,99 @@ namespace Project_FREAK.Controllers
         public List<double> RawThrustVoltages { get; } = new();
         public List<double> RawPressureVoltages { get; } = new();
 
+        private StreamWriter? _dataWriter;
+        private string? _tempDataPath;
+
+        private record DataPoint(
+            double time,
+            double thrust,
+            double pressure,
+            double thrustVoltage,
+            double pressureVoltage
+        );
+
         // Adds a data point to the lists
         public void AddDataPoint(double time, double thrust, double pressure,
                                double thrustVoltage, double pressureVoltage)
         {
-            TimeData.Add(time);
-            ThrustData.Add(thrust);
-            PressureData.Add(pressure);
-            RawThrustVoltages.Add(thrustVoltage);
-            RawPressureVoltages.Add(pressureVoltage);
-        }
-
-        // Exports the recorded data to a JSON file
-        public void ExportToJson(string path)
-        {
-            var data = new
+            var dataPoint = new
             {
-                time_values_seconds = TimeData, // Time data in seconds
-                thrust_values_N = ThrustData, // Thrust data in Newtons
-                pressure_values_PSI = PressureData, // Pressure data in PSI
-                load_cell_voltages_mv = RawThrustVoltages, // Load cell voltages in millivolts
-                pressure_transducer_voltages_v = RawPressureVoltages // Pressure transducer voltages in volts
+                time,
+                thrust,
+                pressure,
+                thrustVoltage,
+                pressureVoltage
             };
 
-            // Serialize the data to JSON and write to the specified file
-            File.WriteAllText(path, JsonSerializer.Serialize(data,
-                new JsonSerializerOptions { WriteIndented = true }));
+            _dataWriter?.WriteLine(JsonSerializer.Serialize(dataPoint));
+            _dataWriter?.Flush(); // Ensure data is written immediately
+        }
+
+        // Exports the collected data to final JSON format
+        public void ExportToJson(string finalPath)
+        {
+            try
+            {
+                if (_tempDataPath == null || !File.Exists(_tempDataPath)) return;
+
+                // Add retry logic for file access
+                const int maxRetries = 5;
+                for (int i = 0; i < maxRetries; i++)
+                {
+                    try
+                    {
+                        // Read and process data
+                        var lines = File.ReadAllLines(_tempDataPath);
+
+                        // Deserialize and organize data
+                        var data = new
+                        {
+                            time_values_seconds = lines.Select(l => JsonSerializer.Deserialize<DataPoint>(l).time).ToList(),
+                            thrust_values_N = lines.Select(l => JsonSerializer.Deserialize<DataPoint>(l).thrust).ToList(),
+                            pressure_values_PSI = lines.Select(l => JsonSerializer.Deserialize<DataPoint>(l).pressure).ToList(),
+                            load_cell_voltages_mv = lines.Select(l => JsonSerializer.Deserialize<DataPoint>(l).thrustVoltage).ToList(),
+                            pressure_transducer_voltages_v = lines.Select(l => JsonSerializer.Deserialize<DataPoint>(l).pressureVoltage).ToList()
+                        };
+
+                        // Write final JSON
+                        File.WriteAllText(finalPath, JsonSerializer.Serialize(data,
+                            new JsonSerializerOptions { WriteIndented = true }));
+                        // ... rest of export logic ...
+                        break;
+                    }
+                    catch (IOException) when (i < maxRetries - 1)
+                    {
+                        Thread.Sleep(50); // Wait for file lock to release
+                    }
+                }
+            }
+            finally
+            {
+                try { File.Delete(_tempDataPath); } catch { /* Ignore cleanup errors */ }
+            }
+        }
+
+        // Creates a temporary data file and initializes the writer
+        public void StartRecording(string sessionFolder)
+        {
+            StopRecording(); // Ensure any previous writer is closed
+            _tempDataPath = Path.Combine(sessionFolder, $"temp_data_{Guid.NewGuid()}.jsonl");
+            _dataWriter = new StreamWriter(_tempDataPath, append: false)
+            {
+                AutoFlush = true // Ensure automatic flushing
+            };
+        }
+
+        public void Dispose()
+        {
+            _dataWriter?.Dispose();
+        }
+
+        public void StopRecording()
+        {
+            _dataWriter?.Flush();
+            _dataWriter?.Dispose();
+            _dataWriter = null;
         }
     }
 }

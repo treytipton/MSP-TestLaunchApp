@@ -179,7 +179,9 @@ namespace Project_FREAK.Views
                 StartTestTextBlock.Text = "Start";
                 StartButton.Background = Brushes.Green;
 
-                // Auto-save data
+                // Stop data recorder before saving
+                _dataRecorder.StopRecording();
+
                 if (_currentSessionFolder != null)
                 {
                     SaveData();
@@ -250,6 +252,7 @@ namespace Project_FREAK.Views
         private void RecordPage_Unloaded(object sender, RoutedEventArgs e)
         {
             // Cleanup resources
+            _dataRecorder.Dispose();
             _stopwatch.Reset();
             _webcamManager.Dispose();
             _labjackManager.Dispose();
@@ -304,6 +307,8 @@ namespace Project_FREAK.Views
                     timestamp);
 
                 Directory.CreateDirectory(_currentSessionFolder);
+
+                _dataRecorder.StartRecording(_currentSessionFolder);
 
                 // Generate filenames
                 var videoFileName = $"test_{timestamp}.mp4";
