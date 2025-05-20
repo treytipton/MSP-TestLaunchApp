@@ -102,6 +102,7 @@ namespace Project_FREAK.Views
             _webcamManager.FrameReceived += bitmap => WebcamImage.Source = bitmap; // Update webcam image
             _webcamManager.CameraError += message =>
                 Dispatcher.Invoke(() => LoadingTextBlock.Text = message); // Show camera error message
+
         }
 
         // Updates the graphs with new data points
@@ -325,5 +326,7 @@ namespace Project_FREAK.Views
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        
     }
 }
